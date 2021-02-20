@@ -30,11 +30,11 @@ Resources:
       Integration:
         ConnectionType: INTERNET
         Credentials: !GetAtt ApiGatewayIamRole.Arn
-        IntegrationHttpMethod: GET
+        IntegrationHttpMethod: POST
         PassthroughBehavior: WHEN_NO_MATCH
         TimeoutInMillis: 29000
         Type: AWS_PROXY
-        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SubscriptionHandlerFunction.Arn}/invocations'
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaSubscriptionHandlerFunction.Arn}/invocations'
       OperationName: 'challenge'
       ResourceId: !Ref ApiGatewayResource
       RestApiId: !Ref ApiGatewayRestApi
@@ -50,15 +50,15 @@ Resources:
     Type: AWS::ApiGateway::Stage
     Properties:
       DeploymentId: !Ref ApiGatewayDeployment
-      Description: Subscription Handler Lambda API Stage DEV
+      Description: Training Stats Lambda API Stage V1
       RestApiId: !Ref ApiGatewayRestApi
-      StageName: 'dev'
+      StageName: 'v1'
 
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn: ApiGatewayMethod
     Properties:
-      Description: Subscription Handler Lambda API Deployment
+      Description: Training Stats Lambda API Deployment
       RestApiId: !Ref ApiGatewayRestApi
 
   ApiGatewayIamRole:
@@ -82,21 +82,21 @@ Resources:
             Statement:
               - Effect: 'Allow'
                 Action: 'lambda:*'
-                Resource: !GetAtt SubscriptionHandlerFunction.Arn
+                Resource: !GetAtt StravaSubscriptionHandlerFunction.Arn
 
-  SubscriptionHandlerFunction:
+  StravaSubscriptionHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/subscription_handler.py
+      CodeUri: src/strava-sub-handler/strava-sub-handler.py
       Description: Strava Webhook Subscription Lambda function
-      FunctionName: 'subscription-handler'
-      Handler: subscription_handler.lambda_handler
+      FunctionName: 'strava-sub-handler'
+      Handler: strava-sub-handler.lambda_handler
       MemorySize: 256
-      Role: !GetAtt LambdaSubscriptionRole.Arn
+      Role: !GetAtt LambdaStravaSubHandlerRole.Arn
       Runtime: python3.8
       Timeout: 60
 
-  LambdaSubscriptionRole:
+  LambdaStravaSubHandlerRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -108,4 +108,6 @@ Resources:
                 - 'lambda.amazonaws.com'
             Action:
               - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Path: '/'

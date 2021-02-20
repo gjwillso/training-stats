@@ -11,11 +11,12 @@ def lambda_handler(event, context):
     '''    
     logger.info(f"Recieved Event Query Params...{json.dumps(event['queryStringParameters'])}")
 
-    if event['queryStringParameters']['hub.verify_token'] == 'STRAVA-GREG':      
+    if event['queryStringParameters']['hub.verify_token'] == 'STRAVA':      
        
             responseObject = {
-                "statusCode": 200,
-                "body": json.dumps({'hub.challenge': event['queryStringParameters']['hub.challenge']})
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({'hub.challenge': event['queryStringParameters']['hub.challenge']})
             }
 
             logger.info(f"Sending Back Hub Challenge ID...{responseObject}")

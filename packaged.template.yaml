@@ -4,7 +4,7 @@ Resources:
   ApiGatewayDeployment:
     DependsOn: ApiGatewayMethod
     Properties:
-      Description: Subscription Handler Lambda API Deployment
+      Description: Training Stats Lambda API Deployment
       RestApiId:
         Ref: ApiGatewayRestApi
     Type: AWS::ApiGateway::Deployment
@@ -28,7 +28,7 @@ Resources:
             Effect: Allow
             Resource:
               Fn::GetAtt:
-              - SubscriptionHandlerFunction
+              - StravaSubscriptionHandlerFunction
               - Arn
           Version: '2012-10-17'
         PolicyName: LambdaAccess
@@ -44,12 +44,12 @@ Resources:
           Fn::GetAtt:
           - ApiGatewayIamRole
           - Arn
-        IntegrationHttpMethod: GET
+        IntegrationHttpMethod: POST
         PassthroughBehavior: WHEN_NO_MATCH
         TimeoutInMillis: 29000
         Type: AWS_PROXY
         Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SubscriptionHandlerFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaSubscriptionHandlerFunction.Arn}/invocations
       OperationName: challenge
       ResourceId:
         Ref: ApiGatewayResource
@@ -86,12 +86,12 @@ Resources:
     Properties:
       DeploymentId:
         Ref: ApiGatewayDeployment
-      Description: Subscription Handler Lambda API Stage DEV
+      Description: Training Stats Lambda API Stage V1
       RestApiId:
         Ref: ApiGatewayRestApi
-      StageName: dev
+      StageName: v1
     Type: AWS::ApiGateway::Stage
-  LambdaSubscriptionRole:
+  LambdaStravaSubHandlerRole:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
@@ -102,18 +102,20 @@ Resources:
             Service:
             - lambda.amazonaws.com
         Version: '2012-10-17'
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Path: /
     Type: AWS::IAM::Role
-  SubscriptionHandlerFunction:
+  StravaSubscriptionHandlerFunction:
     Properties:
-      CodeUri: s3://training-stats/28e79e46a9a5edc008a461def15a883a
+      CodeUri: s3://training-stats/ecea549453d1c4f4c19b5c66a98ab23e
       Description: Strava Webhook Subscription Lambda function
-      FunctionName: subscription-handler
-      Handler: subscription_handler.lambda_handler
+      FunctionName: strava-sub-handler
+      Handler: strava-sub-handler.lambda_handler
       MemorySize: 256
       Role:
         Fn::GetAtt:
-        - LambdaSubscriptionRole
+        - LambdaStravaSubHandlerRole
         - Arn
       Runtime: python3.8
       Timeout: 60
