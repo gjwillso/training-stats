@@ -33,19 +33,6 @@ def get_secret():
         else:
             decoded_binary_secret = base64.b64decode(get_secret_value_response['SecretBinary'])
 
-@app.route('/challenge', methods=['GET'])
-def verify():
-    
-    # Webhook Subscription Handler. 
-    request = app.current_request
-
-    if request.query_params.get('hub.mode') and request.query_params.get('hub.verify_token') == 'STRAVA':
-            response = json.dumps({
-               'hub.challenge': request.query_params.get('hub.challenge')})
-            return Response(body=response, status_code=200)
-    else:
-        app.log.debug("Invalid Request")
-
 @app.route('/strava', methods=['POST'])
 def index():
     

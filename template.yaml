@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Strava Loader API Gateway with a Lambda Integration
+Transform: AWS::Serverless-2016-10-31
+Description: Strava Loader API Gateway with a Lambda Integrations
 
 Resources:
 
@@ -11,13 +12,13 @@ Resources:
       EndpointConfiguration:
         Types:
           - EDGE
-      Name: lambda-api
+      Name: strava-integration-api
 
   ApiGatewayResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
-      PathPart: 'lambda'
+      PathPart: 'challenge'
       RestApiId: !Ref ApiGatewayRestApi
 
   ApiGatewayMethod:
@@ -25,16 +26,16 @@ Resources:
     Properties:
       ApiKeyRequired: false
       AuthorizationType: NONE
-      HttpMethod: POST
+      HttpMethod: GET
       Integration:
         ConnectionType: INTERNET
         Credentials: !GetAtt ApiGatewayIamRole.Arn
-        IntegrationHttpMethod: POST
+        IntegrationHttpMethod: GET
         PassthroughBehavior: WHEN_NO_MATCH
         TimeoutInMillis: 29000
         Type: AWS_PROXY
-        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations'
-      OperationName: 'lambda'
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SubscriptionHandlerFunction.Arn}/invocations'
+      OperationName: 'challenge'
       ResourceId: !Ref ApiGatewayResource
       RestApiId: !Ref ApiGatewayRestApi
 
@@ -49,15 +50,15 @@ Resources:
     Type: AWS::ApiGateway::Stage
     Properties:
       DeploymentId: !Ref ApiGatewayDeployment
-      Description: Lambda API Stage v0
+      Description: Subscription Handler Lambda API Stage DEV
       RestApiId: !Ref ApiGatewayRestApi
-      StageName: 'v0'
+      StageName: 'dev'
 
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn: ApiGatewayMethod
     Properties:
-      Description: Lambda API Deployment
+      Description: Subscription Handler Lambda API Deployment
       RestApiId: !Ref ApiGatewayRestApi
 
   ApiGatewayIamRole:
@@ -81,31 +82,21 @@ Resources:
             Statement:
               - Effect: 'Allow'
                 Action: 'lambda:*'
-                Resource: !GetAtt LambdaFunction.Arn
+                Resource: !GetAtt SubscriptionHandlerFunction.Arn
 
-  LambdaFunction:
-    Type: AWS::Lambda::Function
+  SubscriptionHandlerFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Code:
-        ZipFile: |
-          def handler(event, context):
-            response = {
-              'isBase64Encoded': False,
-              'statusCode': 200,
-              'headers': {},
-              'multiValueHeaders': {},
-              'body': 'Hello, World!'
-            }
-            return response
-      Description: AWS Lambda function
-      FunctionName: 'lambda-function'
-      Handler: index.handler
+      CodeUri: src/subscription_handler.py
+      Description: Strava Webhook Subscription Lambda function
+      FunctionName: 'subscription-handler'
+      Handler: subscription_handler.lambda_handler
       MemorySize: 256
-      Role: !GetAtt LambdaIamRole.Arn
-      Runtime: python3.7
+      Role: !GetAtt LambdaSubscriptionRole.Arn
+      Runtime: python3.8
       Timeout: 60
 
-  LambdaIamRole:
+  LambdaSubscriptionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:

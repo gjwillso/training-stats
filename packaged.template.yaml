@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Strava Loader API Gateway with a Lambda Integrations
+Resources:
+  ApiGatewayDeployment:
+    DependsOn: ApiGatewayMethod
+    Properties:
+      Description: Subscription Handler Lambda API Deployment
+      RestApiId:
+        Ref: ApiGatewayRestApi
+    Type: AWS::ApiGateway::Deployment
+  ApiGatewayIamRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - apigateway.amazonaws.com
+          Sid: ''
+        Version: '2012-10-17'
+      Path: /
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action: lambda:*
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+              - SubscriptionHandlerFunction
+              - Arn
+          Version: '2012-10-17'
+        PolicyName: LambdaAccess
+    Type: AWS::IAM::Role
+  ApiGatewayMethod:
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: GET
+      Integration:
+        ConnectionType: INTERNET
+        Credentials:
+          Fn::GetAtt:
+          - ApiGatewayIamRole
+          - Arn
+        IntegrationHttpMethod: GET
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SubscriptionHandlerFunction.Arn}/invocations
+      OperationName: challenge
+      ResourceId:
+        Ref: ApiGatewayResource
+      RestApiId:
+        Ref: ApiGatewayRestApi
+    Type: AWS::ApiGateway::Method
+  ApiGatewayModel:
+    Properties:
+      ContentType: application/json
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      Schema: {}
+    Type: AWS::ApiGateway::Model
+  ApiGatewayResource:
+    Properties:
+      ParentId:
+        Fn::GetAtt:
+        - ApiGatewayRestApi
+        - RootResourceId
+      PathPart: challenge
+      RestApiId:
+        Ref: ApiGatewayRestApi
+    Type: AWS::ApiGateway::Resource
+  ApiGatewayRestApi:
+    Properties:
+      ApiKeySourceType: HEADER
+      Description: Strava Loader API Gateway with a Lambda Integration
+      EndpointConfiguration:
+        Types:
+        - EDGE
+      Name: strava-integration-api
+    Type: AWS::ApiGateway::RestApi
+  ApiGatewayStage:
+    Properties:
+      DeploymentId:
+        Ref: ApiGatewayDeployment
+      Description: Subscription Handler Lambda API Stage DEV
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      StageName: dev
+    Type: AWS::ApiGateway::Stage
+  LambdaSubscriptionRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+        Version: '2012-10-17'
+      Path: /
+    Type: AWS::IAM::Role
+  SubscriptionHandlerFunction:
+    Properties:
+      CodeUri: s3://training-stats/28e79e46a9a5edc008a461def15a883a
+      Description: Strava Webhook Subscription Lambda function
+      FunctionName: subscription-handler
+      Handler: subscription_handler.lambda_handler
+      MemorySize: 256
+      Role:
+        Fn::GetAtt:
+        - LambdaSubscriptionRole
+        - Arn
+      Runtime: python3.8
+      Timeout: 60
+    Type: AWS::Serverless::Function
+Transform: AWS::Serverless-2016-10-31
