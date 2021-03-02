@@ -2,10 +2,10 @@
 
 Simple App to track training progress
 
-## package with
+## Package with
 aws cloudformation package --template-file ./template.yaml --s3-bucket training-stats --output-template-file packaged.template.yaml
 
-## deploy with 
+## Deploy with 
 aws cloudformation deploy --template-file ./packaged.template.yaml --stack-name training-stats --capabilities CAPABILITY_IAM
 
 ## Activation Service with Subscription push
