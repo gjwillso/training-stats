@@ -1,39 +1,28 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Strava Loader API Gateway with a Lambda Integrations
+Transform: AWS::Serverless-2016-10-31
+Description: Training Stats API Gateway with a Lambda Integrations
 Resources:
-  ApiGatewayDeployment:
-    DependsOn: ApiGatewayMethod
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
     Properties:
-      Description: Training Stats Lambda API Deployment
+      ApiKeySourceType: HEADER
+      Description: Strava API Gateway with a Lambda Integration
+      EndpointConfiguration:
+        Types:
+        - EDGE
+      Name: strava-integration-api
+  ApiGatewaySubscriptionHandlerResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId:
+        Fn::GetAtt:
+        - ApiGatewayRestApi
+        - RootResourceId
+      PathPart: challenge
       RestApiId:
         Ref: ApiGatewayRestApi
-    Type: AWS::ApiGateway::Deployment
-  ApiGatewayIamRole:
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-        - Action:
-          - sts:AssumeRole
-          Effect: Allow
-          Principal:
-            Service:
-            - apigateway.amazonaws.com
-          Sid: ''
-        Version: '2012-10-17'
-      Path: /
-      Policies:
-      - PolicyDocument:
-          Statement:
-          - Action: lambda:*
-            Effect: Allow
-            Resource:
-              Fn::GetAtt:
-              - StravaSubscriptionHandlerFunction
-              - Arn
-          Version: '2012-10-17'
-        PolicyName: LambdaAccess
-    Type: AWS::IAM::Role
-  ApiGatewayMethod:
+  ApiGatewaySubscriptionHandlerMethod:
+    Type: AWS::ApiGateway::Method
     Properties:
       ApiKeyRequired: false
       AuthorizationType: NONE
@@ -52,37 +41,51 @@ Resources:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaSubscriptionHandlerFunction.Arn}/invocations
       OperationName: challenge
       ResourceId:
-        Ref: ApiGatewayResource
+        Ref: ApiGatewaySubscriptionHandlerResource
       RestApiId:
         Ref: ApiGatewayRestApi
-    Type: AWS::ApiGateway::Method
-  ApiGatewayModel:
-    Properties:
-      ContentType: application/json
-      RestApiId:
-        Ref: ApiGatewayRestApi
-      Schema: {}
-    Type: AWS::ApiGateway::Model
-  ApiGatewayResource:
+  ApiGatewayActivityGrabberResource:
+    Type: AWS::ApiGateway::Resource
     Properties:
       ParentId:
         Fn::GetAtt:
         - ApiGatewayRestApi
         - RootResourceId
-      PathPart: challenge
+      PathPart: activity-grabber
       RestApiId:
         Ref: ApiGatewayRestApi
-    Type: AWS::ApiGateway::Resource
-  ApiGatewayRestApi:
+  ApiGatewayActivityGrabberMethod:
+    Type: AWS::ApiGateway::Method
     Properties:
-      ApiKeySourceType: HEADER
-      Description: Strava Loader API Gateway with a Lambda Integration
-      EndpointConfiguration:
-        Types:
-        - EDGE
-      Name: strava-integration-api
-    Type: AWS::ApiGateway::RestApi
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        ConnectionType: INTERNET
+        Credentials:
+          Fn::GetAtt:
+          - ApiGatewayIamRole
+          - Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaActivityGrabberFunction.Arn}/invocations
+      OperationName: activity-grabber
+      ResourceId:
+        Ref: ApiGatewayActivityGrabberResource
+      RestApiId:
+        Ref: ApiGatewayRestApi
+  ApiGatewayModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      ContentType: application/json
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      Schema: {}
   ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
     Properties:
       DeploymentId:
         Ref: ApiGatewayDeployment
@@ -90,28 +93,48 @@ Resources:
       RestApiId:
         Ref: ApiGatewayRestApi
       StageName: v1
-    Type: AWS::ApiGateway::Stage
-  LambdaStravaSubHandlerRole:
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ApiGatewayActivityGrabberMethod
+    Properties:
+      Description: Training Stats Lambda API Deployment
+      RestApiId:
+        Ref: ApiGatewayRestApi
+  ApiGatewayIamRole:
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
-        - Action:
-          - sts:AssumeRole
+        - Sid: ''
           Effect: Allow
           Principal:
             Service:
-            - lambda.amazonaws.com
-        Version: '2012-10-17'
-      ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+            - apigateway.amazonaws.com
+          Action:
+          - sts:AssumeRole
       Path: /
-    Type: AWS::IAM::Role
+      Policies:
+      - PolicyName: LambdaAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: lambda:*
+            Resource:
+            - Fn::GetAtt:
+              - StravaSubscriptionHandlerFunction
+              - Arn
+            - Fn::GetAtt:
+              - StravaActivityGrabberFunction
+              - Arn
   StravaSubscriptionHandlerFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://training-stats/ecea549453d1c4f4c19b5c66a98ab23e
+      CodeUri: s3://training-stats/764a4f66a9ee3a52e4d117af0050526b
       Description: Strava Webhook Subscription Lambda function
-      FunctionName: strava-sub-handler
-      Handler: strava-sub-handler.lambda_handler
+      FunctionName: strava_sub_handler
+      Handler: strava_sub_handler.lambda_handler
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -119,5 +142,47 @@ Resources:
         - Arn
       Runtime: python3.8
       Timeout: 60
+  LambdaStravaSubHandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+  StravaActivityGrabberFunction:
     Type: AWS::Serverless::Function
-Transform: AWS::Serverless-2016-10-31
+    Properties:
+      CodeUri: s3://training-stats/2cbbb7dd2a168d29df6b4d03722acc46
+      Description: Strava Activity Grabber function
+      FunctionName: strava_activity_grabber
+      Handler: strava_activity_grabber.lambda_handler
+      MemorySize: 256
+      Role:
+        Fn::GetAtt:
+        - LambdaStravaActivityGrabberRole
+        - Arn
+      Runtime: python3.8
+      Timeout: 60
+  LambdaStravaActivityGrabberRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /

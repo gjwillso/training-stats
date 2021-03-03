@@ -21,3 +21,8 @@ This will trigger a callback validation from the Strava Subscription service in 
 Example Validation Request
 $ GET https://mycallbackurl.com?hub.verify_token=STRAVA&hub.challenge=15f7d1a91c1f40f8a748fd134752feb3&hub.mode=subscribe
 
+
+## Notes
+
+- Had to manually deploy the strava-sub-handler API via console to take effect.
+    Type: AWS::ApiGateway::Deployment - doesn't appear to have run

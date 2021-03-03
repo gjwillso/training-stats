@@ -11,7 +11,7 @@ def lambda_handler(event, context):
     '''    
     logger.info(f"Recieved Event Query Params...{json.dumps(event['queryStringParameters'])}")
 
-    if event['queryStringParameters']['hub.verify_token'] == 'STRAVA':      
+    if event['queryStringParameters']['hub.verify_token'] == 'STRAVA':
        
             responseObject = {
                 'statusCode': 200,
