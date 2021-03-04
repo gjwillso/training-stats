@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Training Stats API Gateway with a Lambda Integrations
+Description: Training Stats API Gateway with a Lambda Proxy Integrations
 
 Resources:
 
@@ -8,17 +8,17 @@ Resources:
     Type: AWS::ApiGateway::RestApi
     Properties:
       ApiKeySourceType: HEADER
-      Description: Strava API Gateway with a Lambda Integration
+      Description: Training Stats API Gateway with a Lambda Integration
       EndpointConfiguration:
         Types:
           - EDGE
-      Name: strava-integration-api
+      Name: training-stats-integration-api
 
-  ApiGatewaySubscriptionHandlerResource:
+  ApiGatewayStravaHandlerResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
-      PathPart: 'challenge'
+      PathPart: 'strava'
       RestApiId: !Ref ApiGatewayRestApi
 
   ApiGatewaySubscriptionHandlerMethod:
@@ -35,15 +35,8 @@ Resources:
         TimeoutInMillis: 29000
         Type: AWS_PROXY
         Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaSubscriptionHandlerFunction.Arn}/invocations'
-      OperationName: 'challenge'
-      ResourceId: !Ref ApiGatewaySubscriptionHandlerResource
-      RestApiId: !Ref ApiGatewayRestApi
-
-  ApiGatewayActivityGrabberResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
-      PathPart: 'activity-grabber'
+      OperationName: 'subscription_handler'
+      ResourceId: !Ref ApiGatewayStravaHandlerResource
       RestApiId: !Ref ApiGatewayRestApi
 
   ApiGatewayActivityGrabberMethod:
@@ -60,8 +53,8 @@ Resources:
         TimeoutInMillis: 29000
         Type: AWS_PROXY
         Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaActivityGrabberFunction.Arn}/invocations'
-      OperationName: 'activity-grabber'
-      ResourceId: !Ref ApiGatewayActivityGrabberResource
+      OperationName: 'activity_grabber'
+      ResourceId: !Ref ApiGatewayStravaHandlerResource
       RestApiId: !Ref ApiGatewayRestApi
 
   ApiGatewayModel:

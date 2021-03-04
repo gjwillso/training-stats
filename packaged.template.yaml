@@ -1,24 +1,24 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Training Stats API Gateway with a Lambda Integrations
+Description: Training Stats API Gateway with a Lambda Proxy Integrations
 Resources:
   ApiGatewayRestApi:
     Type: AWS::ApiGateway::RestApi
     Properties:
       ApiKeySourceType: HEADER
-      Description: Strava API Gateway with a Lambda Integration
+      Description: Training Stats API Gateway with a Lambda Integration
       EndpointConfiguration:
         Types:
         - EDGE
-      Name: strava-integration-api
-  ApiGatewaySubscriptionHandlerResource:
+      Name: training-stats-integration-api
+  ApiGatewayStravaHandlerResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       ParentId:
         Fn::GetAtt:
         - ApiGatewayRestApi
         - RootResourceId
-      PathPart: challenge
+      PathPart: strava
       RestApiId:
         Ref: ApiGatewayRestApi
   ApiGatewaySubscriptionHandlerMethod:
@@ -39,19 +39,9 @@ Resources:
         Type: AWS_PROXY
         Uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaSubscriptionHandlerFunction.Arn}/invocations
-      OperationName: challenge
+      OperationName: subscription_handler
       ResourceId:
-        Ref: ApiGatewaySubscriptionHandlerResource
-      RestApiId:
-        Ref: ApiGatewayRestApi
-  ApiGatewayActivityGrabberResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      ParentId:
-        Fn::GetAtt:
-        - ApiGatewayRestApi
-        - RootResourceId
-      PathPart: activity-grabber
+        Ref: ApiGatewayStravaHandlerResource
       RestApiId:
         Ref: ApiGatewayRestApi
   ApiGatewayActivityGrabberMethod:
@@ -72,9 +62,9 @@ Resources:
         Type: AWS_PROXY
         Uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaActivityGrabberFunction.Arn}/invocations
-      OperationName: activity-grabber
+      OperationName: activity_grabber
       ResourceId:
-        Ref: ApiGatewayActivityGrabberResource
+        Ref: ApiGatewayStravaHandlerResource
       RestApiId:
         Ref: ApiGatewayRestApi
   ApiGatewayModel:
@@ -131,7 +121,7 @@ Resources:
   StravaSubscriptionHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://training-stats/764a4f66a9ee3a52e4d117af0050526b
+      CodeUri: s3://training-stats/272db85c9915338fdd76df27e921c4a5
       Description: Strava Webhook Subscription Lambda function
       FunctionName: strava_sub_handler
       Handler: strava_sub_handler.lambda_handler
@@ -160,7 +150,7 @@ Resources:
   StravaActivityGrabberFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://training-stats/2cbbb7dd2a168d29df6b4d03722acc46
+      CodeUri: s3://training-stats/30e9ca0eecdc248fb02b88a2e0d757f2
       Description: Strava Activity Grabber function
       FunctionName: strava_activity_grabber
       Handler: strava_activity_grabber.lambda_handler

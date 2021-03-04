@@ -8,18 +8,21 @@ logger.setLevel(logging.INFO)
 
 print('Strava Grabber Activated...')
 
+
 def lambda_handler(event, context):
 
     logger.info(f"Recieved New Activity Notification {json.dumps(event)}")
-       
+
     responseObject = {
         'statusCode': 200,
-        'headers': {'Content-Type': 'application/json'}
+        'headers': {'Content-Type': 'application/json'},
+        'body': json.dumps({'returning body': event})
     }
 
     logger.info(f"Sending Back 200...{responseObject}")
-    
+
     return responseObject
+
 
 '''
     tokendata = json.loads(get_secret())   
