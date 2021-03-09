@@ -26,3 +26,14 @@ $ GET https://mycallbackurl.com?hub.verify_token=STRAVA&hub.challenge=15f7d1a91c
 
 - Had to manually deploy the strava-sub-handler API via console to take effect.
     Type: AWS::ApiGateway::Deployment - doesn't appear to have run
+
+- Once the subscription has been setup, I had to accept an auth request via the strava console with the correct scope:
+  https://www.strava.com/oauth/authorize?client_id=11111&response_type=code&redirect_uri=http://localhost&approval_prompt=force&scope=activity:read_all
+
+- Then take the returned code an request a refresh and bearer token 
+  curl -X POST https://www.strava.com/api/v3/oauth/token -d client_id=11111 -d client_secret=secret -d code=6cfc52194c8047eaf007cf56d3a6ef5356846637 -d grant_type=authorization_code
+
+- Then actually make a call to the API to enable the end to end webhook flow
+  
+  curl -G https://www.strava.com/api/v3/athlete -H "Authorization: Bearer replace_with_bearer_token"
+  curl -G "https://www.strava.com/api/v3/athlete/activities?access_token=replace_with_bearer_token"
