@@ -37,3 +37,14 @@ $ GET https://mycallbackurl.com?hub.verify_token=STRAVA&hub.challenge=15f7d1a91c
   
   curl -G https://www.strava.com/api/v3/athlete -H "Authorization: Bearer replace_with_bearer_token"
   curl -G "https://www.strava.com/api/v3/athlete/activities?access_token=replace_with_bearer_token"
+
+
+- Saved Mapping template:
+
+{ 
+    "TableName": "table-name",
+    "Item": {
+        "object_id": {"N": $input.json('$.object_id')},
+        "event_time": {"N": $input.json('$.event_time')}
+    }
+}

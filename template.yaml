@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Training Stats API Gateway with a Lambda Proxy Integrations
+Description: Training Stats API Gateway
 
 Resources:
 
@@ -8,7 +8,7 @@ Resources:
     Type: AWS::ApiGateway::RestApi
     Properties:
       ApiKeySourceType: HEADER
-      Description: Training Stats API Gateway with a Lambda Integration
+      Description: Training Stats API Gateway
       EndpointConfiguration:
         Types:
           - EDGE
@@ -39,23 +39,42 @@ Resources:
       ResourceId: !Ref ApiGatewayStravaHandlerResource
       RestApiId: !Ref ApiGatewayRestApi
 
-  ApiGatewayActivityGrabberMethod:
+  ApiGatewayStravaWebhooktoDynamoMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       ApiKeyRequired: false
       AuthorizationType: NONE
       HttpMethod: POST
       Integration:
-        ConnectionType: INTERNET
-        Credentials: !GetAtt ApiGatewayIamRole.Arn
-        IntegrationHttpMethod: POST
-        PassthroughBehavior: WHEN_NO_MATCH
-        TimeoutInMillis: 29000
-        Type: AWS_PROXY
-        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaActivityGrabberFunction.Arn}/invocations'
-      OperationName: 'activity_grabber'
+        Type: AWS
+        IntegrationHttpMethod: POST       
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:dynamodb:action/PutItem'
+        Credentials: !GetAtt ApiGatewayToWebhookDynamoDBTableRole.Arn
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        RequestTemplates:
+          application/json: |
+            { 
+                "TableName": "Strava-Webhook",
+                    "Item": {
+                        "object_id": {
+                            "N": "$input.json('$.object_id')"
+                            },
+                        "event_time": {
+                            "N": "$input.json('$.event_time')"
+                            },
+                        "aspect_type": {
+                            "S": $input.json('$.aspect_type')
+                        }  
+                    }
+            }
+        IntegrationResponses:
+          - StatusCode: '200'  
       ResourceId: !Ref ApiGatewayStravaHandlerResource
       RestApiId: !Ref ApiGatewayRestApi
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseModels:
+            application/json: Empty
 
   ApiGatewayModel:
     Type: AWS::ApiGateway::Model
@@ -68,15 +87,15 @@ Resources:
     Type: AWS::ApiGateway::Stage
     Properties:
       DeploymentId: !Ref ApiGatewayDeployment
-      Description: Training Stats Lambda API Stage V1
+      Description: Training Stats API Gateway Stage V1
       RestApiId: !Ref ApiGatewayRestApi
       StageName: 'v1'
 
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
-    DependsOn: ApiGatewayActivityGrabberMethod
+    DependsOn: ApiGatewayStravaWebhooktoDynamoMethod
     Properties:
-      Description: Training Stats Lambda API Deployment
+      Description: Training Stats API Gateway Deployment
       RestApiId: !Ref ApiGatewayRestApi
 
   ApiGatewayIamRole:
@@ -158,4 +177,55 @@ Resources:
               - 'sts:AssumeRole'
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Path: '/'      
+      Path: '/'
+
+  ApiGatewayToWebhookDynamoDBTableRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service:
+                - 'apigateway.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+      Path: '/'
+
+  ApiGatewayToWebhookDynamoDBTablePolicy:     
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: APIGW-TO-WEBHOOK-DYNAMO
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: 'dynamodb:PutItem'
+            Resource: !GetAtt StravaWebhookDynamoDBTable.Arn
+      Roles:
+        - !Ref ApiGatewayToWebhookDynamoDBTableRole
+
+  StravaWebhookDynamoDBTable: 
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      TableName: "Strava-Webhook"
+      AttributeDefinitions: 
+        - 
+          AttributeName: "object_id"
+          AttributeType: "N"
+        - 
+          AttributeName: "event_time"
+          AttributeType: "N"
+      KeySchema: 
+        - 
+          AttributeName: "object_id"
+          KeyType: "HASH"
+        - 
+          AttributeName: "event_time"
+          KeyType: "RANGE"
+      ProvisionedThroughput: 
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
