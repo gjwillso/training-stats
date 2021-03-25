@@ -55,30 +55,4 @@ def lambda_handler(event, context):
     else:
         logger.info("Dropping Update / Delete Activity for now...")
 
-def get_secret():
-    secret_name = "strava-token"
-    region_name = "eu-west-1"
-
-    session = boto3.session.Session()
-    client = session.client(
-        service_name='secretsmanager',
-        region_name=region_name
-    )
-
-    try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId=secret_name
-        )
-
-    except ClientError as e:
-        if e.response['Error']['Code'] == 'ResourceNotFoundException':
-            raise e
-
-    else:
-        if 'SecretString' in get_secret_value_response:
-            secret = get_secret_value_response['SecretString']
-            return secret
-        else:
-            decoded_binary_secret = base64.b64decode(get_secret_value_response['SecretBinary'])
-
 '''

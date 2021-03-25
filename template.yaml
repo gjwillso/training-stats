@@ -126,10 +126,10 @@ Resources:
   StravaSubscriptionHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/strava_sub_handler/strava_sub_handler.py
+      CodeUri: src/ts-strava-setup/main.py
       Description: Strava Webhook Subscription Lambda function
       FunctionName: 'strava_sub_handler'
-      Handler: strava_sub_handler.lambda_handler
+      Handler: main.lambda_handler
       MemorySize: 256
       Role: !GetAtt LambdaStravaSubHandlerRole.Arn
       Runtime: python3.8
