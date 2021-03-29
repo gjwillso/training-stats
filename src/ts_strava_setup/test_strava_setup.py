@@ -11,7 +11,7 @@ def test_strava_sub_handler():
 
     mock_event = {
         "queryStringParameters": {
-            "hub.challenge": "Greg",
+            "hub.challenge": "15f7d1a91c1f40f8a748fd134752feb3",
             "hub.mode": "subscribe",
             "hub.verify_token": "STRAVA"
         }

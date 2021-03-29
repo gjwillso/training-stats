@@ -1,5 +1,6 @@
 import json
 import boto3
+from cfnresponse import send, SUCCESS
 from botocore.exceptions import ClientError
 #import requests
 import logging
@@ -13,15 +14,15 @@ def lambda_handler(event, context):
 
     logger.info(f"Recieved New Activity Notification {json.dumps(event)}")
 
-    responseObject = {
+    response_object = {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json'},
         'body': json.dumps({'returning body': event})
     }
 
-    logger.info(f"Sending Back 200...{responseObject}")
+    logger.info(f"Sending Back 200...{response_object}")
 
-    return responseObject
+    return response_object
 
 
 '''

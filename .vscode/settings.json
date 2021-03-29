@@ -1,4 +1,10 @@
 {
     "python.linting.pylintUseMinimalCheckers": false,
-    "python.pythonPath": "/home/gwill/.local/share/virtualenvs/training-stats-Q_du6IcX/bin/python"
+    "python.pythonPath": "/home/gwill/.local/share/virtualenvs/training-stats-Q_du6IcX/bin/python",
+    "python.testing.pytestArgs": [
+        "src"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.nosetestsEnabled": false,
+    "python.testing.pytestEnabled": true
 }

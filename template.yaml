@@ -121,19 +121,26 @@ Resources:
                 Action: 'lambda:*'
                 Resource: 
                 - !GetAtt StravaSubscriptionHandlerFunction.Arn
-                - !GetAtt StravaActivityGrabberFunction.Arn
+                #- !GetAtt StravaActivityGrabberFunction.Arn
 
   StravaSubscriptionHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/ts-strava-setup/main.py
       Description: Strava Webhook Subscription Lambda function
-      FunctionName: 'strava_sub_handler'
+      FunctionName: 'strava_sub_manager'
       Handler: main.lambda_handler
       MemorySize: 256
       Role: !GetAtt LambdaStravaSubHandlerRole.Arn
       Runtime: python3.8
       Timeout: 60
+
+  TriggerStravaSetup:
+    Type: Custom::TriggerStravaSetup
+    Properties:
+      ServiceToken: !GetAtt StravaSubscriptionHandlerFunction.Arn
+      Region: !Ref "AWS::Region"
+      CallBack_Url: !Ref ApiGatewayStage
 
   LambdaStravaSubHandlerRole:
     Type: AWS::IAM::Role
@@ -151,33 +158,33 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Path: '/'
 
-  StravaActivityGrabberFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/strava_activity_grabber/strava_activity_grabber.py
-      Description: Strava Activity Grabber function
-      FunctionName: 'strava_activity_grabber'
-      Handler: strava_activity_grabber.lambda_handler
-      MemorySize: 256
-      Role: !GetAtt LambdaStravaActivityGrabberRole.Arn
-      Runtime: python3.8
-      Timeout: 60
+  # StravaActivityGrabberFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: src/strava_activity_grabber/strava_activity_grabber.py
+  #     Description: Strava Activity Grabber function
+  #     FunctionName: 'strava_activity_grabber'
+  #     Handler: strava_activity_grabber.lambda_handler
+  #     MemorySize: 256
+  #     Role: !GetAtt LambdaStravaActivityGrabberRole.Arn
+  #     Runtime: python3.8
+  #     Timeout: 60
 
-  LambdaStravaActivityGrabberRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: 'Allow'
-            Principal:
-              Service:
-                - 'lambda.amazonaws.com'
-            Action:
-              - 'sts:AssumeRole'
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Path: '/'
+  # LambdaStravaActivityGrabberRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: 'Allow'
+  #           Principal:
+  #             Service:
+  #               - 'lambda.amazonaws.com'
+  #           Action:
+  #             - 'sts:AssumeRole'
+  #     ManagedPolicyArns:
+  #       - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  #     Path: '/'
 
   ApiGatewayToWebhookDynamoDBTableRole:
     Type: AWS::IAM::Role
