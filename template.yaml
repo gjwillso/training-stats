@@ -38,7 +38,7 @@ Resources:
         PassthroughBehavior: WHEN_NO_MATCH
         TimeoutInMillis: 29000
         Type: AWS_PROXY
-        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaSubscriptionHandlerFunction.Arn}/invocations'
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaSubscriptionManagerFunction.Arn}/invocations'
       OperationName: 'subscription_handler'
       ResourceId: !Ref ApiGatewayStravaHandlerResource
       RestApiId: !Ref ApiGatewayRestApi
@@ -124,10 +124,10 @@ Resources:
               - Effect: 'Allow'
                 Action: 'lambda:*'
                 Resource: 
-                - !GetAtt StravaSubscriptionHandlerFunction.Arn
+                - !GetAtt StravaSubscriptionManagerFunction.Arn
                 #- !GetAtt StravaActivityGrabberFunction.Arn
 
-  StravaSubscriptionHandlerFunction:
+  StravaSubscriptionManagerFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/strava_setup/
@@ -135,18 +135,22 @@ Resources:
       FunctionName: 'strava_sub_manager'
       Handler: main.lambda_handler
       MemorySize: 256
-      Role: !GetAtt LambdaStravaSubHandlerRole.Arn
+      Role: !GetAtt LambdaStravaSubManagerRole.Arn
       Runtime: python3.8
       Timeout: 60
-
+      Environment:
+        Variables:
+          Region: !Ref "AWS::Region" 
+          CallBack_Url: !Sub https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiGatewayStage}/strava
+          Secret_Name: !Ref SecretName
+          
   TriggerStravaSetup:
     Type: Custom::TriggerStravaSetup
     Properties:
-      ServiceToken: !GetAtt StravaSubscriptionHandlerFunction.Arn
-      CallBack_Url: !Ref ApiGatewayStage
-      Secret_Name: !Ref SecretName
+      ServiceToken: !GetAtt StravaSubscriptionManagerFunction.Arn
+      Version: 0.3
 
-  LambdaStravaSubHandlerRole:
+  LambdaStravaSubManagerRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -160,6 +164,7 @@ Resources:
               - 'sts:AssumeRole'
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/SecretsManagerReadWrite
       Path: '/'
 
   # StravaActivityGrabberFunction:

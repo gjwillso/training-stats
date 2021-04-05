@@ -42,7 +42,7 @@ Resources:
         TimeoutInMillis: 29000
         Type: AWS_PROXY
         Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaSubscriptionHandlerFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaSubscriptionManagerFunction.Arn}/invocations
       OperationName: subscription_handler
       ResourceId:
         Ref: ApiGatewayStravaHandlerResource
@@ -127,34 +127,37 @@ Resources:
             Action: lambda:*
             Resource:
             - Fn::GetAtt:
-              - StravaSubscriptionHandlerFunction
+              - StravaSubscriptionManagerFunction
               - Arn
-  StravaSubscriptionHandlerFunction:
+  StravaSubscriptionManagerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://training-stats/e2045c9d430f329d06864d503218d959
+      CodeUri: s3://training-stats/936a9864ec24ce0c78699afce76fb007
       Description: Strava Webhook Setup Lambda function
       FunctionName: strava_sub_manager
       Handler: main.lambda_handler
       MemorySize: 256
       Role:
         Fn::GetAtt:
-        - LambdaStravaSubHandlerRole
+        - LambdaStravaSubManagerRole
         - Arn
       Runtime: python3.8
       Timeout: 60
+      Environment:
+        Variables:
+          CallBack_Url:
+            Fn::Sub: https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiGatewayStage}/strava
+          Secret_Name:
+            Ref: SecretName
   TriggerStravaSetup:
     Type: Custom::TriggerStravaSetup
     Properties:
       ServiceToken:
         Fn::GetAtt:
-        - StravaSubscriptionHandlerFunction
+        - StravaSubscriptionManagerFunction
         - Arn
-      CallBack_Url:
-        Ref: ApiGatewayStage
-      Secret_Name:
-        Ref: SecretName
-  LambdaStravaSubHandlerRole:
+      Version: 0.3
+  LambdaStravaSubManagerRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -168,6 +171,7 @@ Resources:
           - sts:AssumeRole
       ManagedPolicyArns:
       - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/SecretsManagerReadWrite
       Path: /
   ApiGatewayToWebhookDynamoDBTableRole:
     Type: AWS::IAM::Role
