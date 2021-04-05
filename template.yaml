@@ -2,8 +2,12 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Training Stats API Gateway
 
+Parameters:
+  SecretName:
+    Type: String
+    Default: strava_creds
+    
 Resources:
-
   ApiGatewayRestApi:
     Type: AWS::ApiGateway::RestApi
     Properties:
@@ -126,8 +130,8 @@ Resources:
   StravaSubscriptionHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/ts-strava-setup/main.py
-      Description: Strava Webhook Subscription Lambda function
+      CodeUri: src/strava_setup/
+      Description: Strava Webhook Setup Lambda function
       FunctionName: 'strava_sub_manager'
       Handler: main.lambda_handler
       MemorySize: 256
@@ -139,8 +143,8 @@ Resources:
     Type: Custom::TriggerStravaSetup
     Properties:
       ServiceToken: !GetAtt StravaSubscriptionHandlerFunction.Arn
-      Region: !Ref "AWS::Region"
       CallBack_Url: !Ref ApiGatewayStage
+      Secret_Name: !Ref SecretName
 
   LambdaStravaSubHandlerRole:
     Type: AWS::IAM::Role

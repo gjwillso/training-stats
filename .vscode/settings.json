@@ -2,7 +2,7 @@
     "python.linting.pylintUseMinimalCheckers": false,
     "python.pythonPath": "/home/gwill/.local/share/virtualenvs/training-stats-Q_du6IcX/bin/python",
     "python.testing.pytestArgs": [
-        "src"
+        "tests"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.nosetestsEnabled": false,

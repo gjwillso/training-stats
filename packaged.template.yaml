@@ -1,6 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Training Stats API Gateway
+Parameters:
+  SecretName:
+    Type: String
+    Default: strava_creds
 Resources:
   ApiGatewayRestApi:
     Type: AWS::ApiGateway::RestApi
@@ -64,7 +68,9 @@ Resources:
           application/json: "{ \n    \"TableName\": \"Strava-Webhook\",\n        \"\
             Item\": {\n            \"object_id\": {\n                \"N\": \"$input.json('$.object_id')\"\
             \n                },\n            \"event_time\": {\n                \"\
-            N\": \"$input.json('$.event_time')\"\n                }\n        }\n}\n"
+            N\": \"$input.json('$.event_time')\"\n                },\n           \
+            \ \"aspect_type\": {\n                \"S\": $input.json('$.aspect_type')\n\
+            \            }  \n        }\n}\n"
         IntegrationResponses:
         - StatusCode: '200'
       ResourceId:
@@ -123,16 +129,13 @@ Resources:
             - Fn::GetAtt:
               - StravaSubscriptionHandlerFunction
               - Arn
-            - Fn::GetAtt:
-              - StravaActivityGrabberFunction
-              - Arn
   StravaSubscriptionHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://training-stats/d6d0573d21867cba39b87bf9f81e80cd
-      Description: Strava Webhook Subscription Lambda function
-      FunctionName: strava_sub_handler
-      Handler: strava_sub_handler.lambda_handler
+      CodeUri: s3://training-stats/e2045c9d430f329d06864d503218d959
+      Description: Strava Webhook Setup Lambda function
+      FunctionName: strava_sub_manager
+      Handler: main.lambda_handler
       MemorySize: 256
       Role:
         Fn::GetAtt:
@@ -140,36 +143,18 @@ Resources:
         - Arn
       Runtime: python3.8
       Timeout: 60
-  LambdaStravaSubHandlerRole:
-    Type: AWS::IAM::Role
+  TriggerStravaSetup:
+    Type: Custom::TriggerStravaSetup
     Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-        - Effect: Allow
-          Principal:
-            Service:
-            - lambda.amazonaws.com
-          Action:
-          - sts:AssumeRole
-      ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Path: /
-  StravaActivityGrabberFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: s3://training-stats/f7751806212174e12e03b49d0b9f1a33
-      Description: Strava Activity Grabber function
-      FunctionName: strava_activity_grabber
-      Handler: strava_activity_grabber.lambda_handler
-      MemorySize: 256
-      Role:
+      ServiceToken:
         Fn::GetAtt:
-        - LambdaStravaActivityGrabberRole
+        - StravaSubscriptionHandlerFunction
         - Arn
-      Runtime: python3.8
-      Timeout: 60
-  LambdaStravaActivityGrabberRole:
+      CallBack_Url:
+        Ref: ApiGatewayStage
+      Secret_Name:
+        Ref: SecretName
+  LambdaStravaSubHandlerRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:

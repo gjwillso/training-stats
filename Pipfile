@@ -6,7 +6,7 @@ name = "pypi"
 [packages]
 boto3 = "*"
 requests = "*"
-cfn-response = "*"
+cfnresponse = "*"
 
 [dev-packages]
 pytest = "*"
