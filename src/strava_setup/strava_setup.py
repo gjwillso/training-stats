@@ -26,16 +26,16 @@ def strava_sub_creator(api_creds, callback_url):
 
     credentials = json.loads(api_creds)
 
-    payload = {
-     'client_id': credentials["client_id"],
-     'client_secret': credentials["client_secret"],
-     'callback_url': callback_url,
-     'verify_token': 'STRAVA'
-    }
-
-    json_payload = json.dumps(payload)
-
-    response = http.request('POST','https://www.strava.com/api/v3/push_subscriptions',body=json_payload)
+    response = http.request(
+        'POST',
+        'https://www.strava.com/api/v3/push_subscriptions',
+        fields={
+            'client_id': credentials["client_id"],
+            'client_secret': credentials["client_secret"],
+            'callback_url': callback_url,
+            'verify_token': 'STRAVA'
+            }
+        )
 
     LOGGER.info(response.data)
 
