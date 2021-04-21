@@ -43,30 +43,6 @@ def strava_sub_creator(api_creds, callback_url):
 
     return response.data
 
-def strava_sub_handler(event):
-    ''' 
-    Webhook Subscription Handler. 
-    '''    
-
-    event_json = json.dumps(event['queryStringParameters'])
-
-    LOGGER.info('Strava Subscription Handler Starting...')
-    LOGGER.info(f"Recieved Event Query Params...{event_json}")
-
-    if event['queryStringParameters']['hub.verify_token'] == 'STRAVA':
-
-            responseObject = {
-                'statusCode': 200,
-                'headers': {'Content-Type': 'application/json'},
-                'body': {'hub.challenge': event['queryStringParameters']['hub.challenge']}
-            }
-
-            LOGGER.info(f"Sending Back Hub Challenge ID...{responseObject}")
-
-            return responseObject
-    else:
-        LOGGER.info("Invalid Request")
-
 
 def get_api_creds(secret_name, region_name):
     """

@@ -42,7 +42,7 @@ Resources:
         TimeoutInMillis: 29000
         Type: AWS_PROXY
         Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaSubscriptionManagerFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StravaSubHandlerFunction.Arn}/invocations
       OperationName: subscription_handler
       ResourceId:
         Ref: ApiGatewayStravaHandlerResource
@@ -129,10 +129,13 @@ Resources:
             - Fn::GetAtt:
               - StravaSubscriptionManagerFunction
               - Arn
+            - Fn::GetAtt:
+              - StravaSubHandlerFunction
+              - Arn
   StravaSubscriptionManagerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://training-stats/936a9864ec24ce0c78699afce76fb007
+      CodeUri: s3://training-stats/dab41a938bb7c0ca24f911c2271500c7
       Description: Strava Webhook Setup Lambda function
       FunctionName: strava_sub_manager
       Handler: main.lambda_handler
@@ -145,18 +148,22 @@ Resources:
       Timeout: 60
       Environment:
         Variables:
+          Region:
+            Ref: AWS::Region
           CallBack_Url:
             Fn::Sub: https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiGatewayStage}/strava
           Secret_Name:
             Ref: SecretName
   TriggerStravaSetup:
     Type: Custom::TriggerStravaSetup
+    DependsOn:
+    - StravaSubHandlerFunction
     Properties:
       ServiceToken:
         Fn::GetAtt:
         - StravaSubscriptionManagerFunction
         - Arn
-      Version: 0.3
+      Version: 0.4
   LambdaStravaSubManagerRole:
     Type: AWS::IAM::Role
     Properties:
@@ -172,6 +179,39 @@ Resources:
       ManagedPolicyArns:
       - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+      Path: /
+  StravaSubHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://training-stats/83237eef2a3c82a689cb01daafa31da1
+      Description: Strava Callback Handler Lambda function
+      FunctionName: strava_sub_handler
+      Handler: strava_sub_handler.lambda_handler
+      MemorySize: 256
+      Role:
+        Fn::GetAtt:
+        - StravaSubHandlerFunctionRole
+        - Arn
+      Runtime: python3.8
+      Timeout: 60
+      Environment:
+        Variables:
+          Region:
+            Ref: AWS::Region
+  StravaSubHandlerFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Path: /
   ApiGatewayToWebhookDynamoDBTableRole:
     Type: AWS::IAM::Role
