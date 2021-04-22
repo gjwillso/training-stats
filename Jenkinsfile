@@ -2,19 +2,19 @@ pipeline {
     agent any
 
     stages {
-        stage('Build') {
+        stage('CFN Validate') {
             steps {
-                echo 'Building..'
+                echo 'Validating Cloudformation Template..'
             }
         }
-        stage('Test') {
+        stage('CFN Package') {
             steps {
-                echo 'Testing..'
+                echo 'Performing Cloudformation Package..'
             }
         }
-        stage('Deploy') {
+        stage('CFN Deploy') {
             steps {
-                echo 'Deploying....'
+                echo 'Performing Cloudformation Create/Update Stack....'
             }
         }
     }
