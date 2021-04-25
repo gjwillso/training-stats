@@ -1,3 +1,5 @@
+@Library('github.com/releaseworks/jenkinslib') _
+
 pipeline {
     agent any
 
@@ -5,19 +7,9 @@ pipeline {
         stage('CFN Validate')  {
 
             steps {
-
-                echo 'Validating Cloudformation Template..'
-       
-                withCredentials([[
-                    $class: ‘AmazonWebServicesCredentialsBinding’,
-                    credentialsId: ‘ts_git_user’,
-                    accessKeyVariable: ‘AWS_ACCESS_KEY_ID’,
-                    secretKeyVariable: ‘AWS_SECRET_ACCESS_KEY’
-            ]]) {
-                sh ”’
-                    export AWS_REGION=eu-west-1
-                    aws cloudformation validate-template --template-body file://template.yaml
-                ’”
+                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'ts_git_user', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    AWS("--region=eu-west-1 s3 ls")
+                }
             }
         }
         stage('CFN Package') {
