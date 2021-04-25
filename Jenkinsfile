@@ -14,8 +14,10 @@ pipeline {
                     accessKeyVariable: ‘AWS_ACCESS_KEY_ID’,
                     secretKeyVariable: ‘AWS_SECRET_ACCESS_KEY’
             ]]) {
-                 export AWS_REGION=eu-west-1
-                 aws cloudformation validate-template --template-body file://template.yaml
+                sh ”’
+                    export AWS_REGION=eu-west-1
+                    aws cloudformation validate-template --template-body file://template.yaml
+                ’”
             }
         }
         stage('CFN Package') {
