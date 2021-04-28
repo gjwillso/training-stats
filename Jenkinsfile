@@ -1,3 +1,5 @@
+import jenkins.model.*
+jenkins = Jenkins.instance
 @Library('github.com/releaseworks/jenkinslib') _
 
 pipeline {
